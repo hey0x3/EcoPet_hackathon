@@ -31,31 +31,6 @@ export default function StatsScreen() {
     return stages[stage] || stage;
   };
 
-  const getImpactStats = () => {
-    const litterPicked = totalTasksCompleted * 0.3;
-    const waterSaved = totalTasksCompleted * 0.2 * 10;
-    const co2Reduced = totalTasksCompleted * 0.15 * 2;
-    const itemsRecycled = totalTasksCompleted * 0.25 * 3;
-
-    return {
-      litterPicked: Math.round(litterPicked),
-      waterSaved: Math.round(waterSaved),
-      co2Reduced: Math.round(co2Reduced * 10) / 10,
-      itemsRecycled: Math.round(itemsRecycled),
-    };
-  const getAchievements = () => {
-    const achievements = [];
-    if (level >= 2) achievements.push({ name: 'First Steps', icon: 'footsteps', color: '#4CAF50' });
-    if (level >= 3) achievements.push({ name: 'Growing Strong', icon: 'trending-up', color: '#4ECDC4' });
-    if (level >= 5) achievements.push({ name: 'Eco Champion', icon: 'trophy', color: '#FFD700' });
-    if (totalTasksCompleted >= 10) achievements.push({ name: 'Task Master', icon: 'checkmark-circle', color: '#FF6B6B' });
-    if (totalTasksCompleted >= 50) achievements.push({ name: 'Climate Hero', icon: 'shield', color: '#9B59B6' });
-    if (tasksToday >= 3) achievements.push({ name: 'Daily Warrior', icon: 'flame', color: '#FF8C00' });
-    return achievements;
-  };
-
-  const achievements = getAchievements();
-
   // Use actual tracked impact values from context
   const impact = {
     litterPicked,

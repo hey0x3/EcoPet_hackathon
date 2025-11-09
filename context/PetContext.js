@@ -39,34 +39,37 @@ export const PetProvider = ({ children }) => {
 
   useEffect(() => {
     savePetData();
-  }, [exp, level, petStage, petName, totalTasksCompleted, tasksToday, lastTaskDate, consecutiveDaysLogged, hatsCollected, firstTaskDone, expPerLevel]);
-  }, [exp, level, petStage, petName, totalTasksCompleted, tasksToday, lastTaskDate, coins, litterPicked, waterSaved, co2Reduced, itemsRecycled]);
+  }, [exp, level, petStage, petName, totalTasksCompleted, tasksToday, lastTaskDate, consecutiveDaysLogged, hatsCollected, firstTaskDone, expPerLevel, coins, litterPicked, waterSaved, co2Reduced, itemsRecycled]);
 
   // Level ve Stage kontrolü, EXP artırımı ile birlikte
   useEffect(() => {
-    let newLevel = level;
-    while (exp >= expPerLevel * newLevel) {
-      newLevel++;
+    let calculatedLevel = level;
+    let currentExpThreshold = expPerLevel * (calculatedLevel - 1);
+    
+    // Calculate level based on EXP
+    while (exp >= currentExpThreshold + expPerLevel) {
+      calculatedLevel++;
+      currentExpThreshold += expPerLevel;
       // Yeni level atlandığında bir sonraki level için gereken EXP %10 artsın
       setExpPerLevel(prev => Math.floor(prev * 1.1));
-    const newLevel = Math.floor(exp / 100) + 1;
-    if (newLevel !== level && newLevel > level) {
-      setLevel(newLevel);
+    }
+    
+    if (calculatedLevel !== level && calculatedLevel > level) {
+      setLevel(calculatedLevel);
       setShowLevelUp(true);
       // Hide animation after 2 seconds (slightly longer than animation)
       setTimeout(() => {
         setShowLevelUp(false);
       }, 2000);
     }
-    if (newLevel !== level) setLevel(newLevel);
 
     let newStage = 'egg';
-    if (newLevel >= 10) newStage = 'adult';
-    else if (newLevel >= 5) newStage = 'teen';
-    else if (newLevel >= 2) newStage = 'baby';
+    if (calculatedLevel >= 10) newStage = 'adult';
+    else if (calculatedLevel >= 5) newStage = 'teen';
+    else if (calculatedLevel >= 2) newStage = 'baby';
 
     if (newStage !== petStage) setPetStage(newStage);
-  }, [exp]);
+  }, [exp, level, petStage, expPerLevel]);
 
   useEffect(() => {
     const today = new Date().toDateString();
@@ -200,34 +203,6 @@ export const PetProvider = ({ children }) => {
     return ((exp - currentLevelExp) / (nextLevelExp - currentLevelExp)) * 100;
   };
 
-  const achievements = [
-    { name: 'First Task', unlocked: firstTaskDone, expBoostPercent: 1 },
-    { name: '7 Days Login', unlocked: consecutiveDaysLogged >= 7, expBoostPercent: 2 },
-    { name: '5 Hats Collected', unlocked: hatsCollected >= 5, expBoostPercent: 3 },
-    { name: 'Level 10 Pet', unlocked: level >= 10, expBoostPercent: 5 },
-  ];
-
-  return (
-    <PetContext.Provider value={{
-      exp,
-      level,
-      petStage,
-      petName,
-      totalTasksCompleted,
-      tasksToday,
-      addExp,
-      completeTask,
-      renamePet,
-      expToNextLevel,
-      expProgress,
-      achievements,
-      consecutiveDaysLogged,
-      hatsCollected,
-      expPerLevel
-    }}>
-      {children}
-    </PetContext.Provider>
-  );
   const spendCoins = (amount) => {
     let success = false;
     setCoins(prev => {
@@ -243,6 +218,13 @@ export const PetProvider = ({ children }) => {
   const addCoins = (amount) => {
     setCoins(prev => prev + amount);
   };
+
+  const achievements = [
+    { name: 'First Task', unlocked: firstTaskDone, expBoostPercent: 1 },
+    { name: '7 Days Login', unlocked: consecutiveDaysLogged >= 7, expBoostPercent: 2 },
+    { name: '5 Hats Collected', unlocked: hatsCollected >= 5, expBoostPercent: 3 },
+    { name: 'Level 10 Pet', unlocked: level >= 10, expBoostPercent: 5 },
+  ];
 
   const value = {
     exp,
@@ -264,6 +246,10 @@ export const PetProvider = ({ children }) => {
     expProgress,
     spendCoins,
     addCoins,
+    achievements,
+    consecutiveDaysLogged,
+    hatsCollected,
+    expPerLevel,
   };
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;
