@@ -1,26 +1,66 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePet } from '../context/PetContext';
 import VirtualPet from '../components/VirtualPet';
+import LevelUpAnimation from '../components/LevelUpAnimation';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen({ navigation }) {
-  const { level, exp, petName, petStage, expProgress, expToNextLevel, tasksToday } = usePet();
+  const { level, exp, petName, petStage, expProgress, expToNextLevel, tasksToday, showLevelUp, renamePet } = usePet();
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [newPetName, setNewPetName] = useState('');
+
+  useEffect(() => {
+    checkFirstLaunch();
+  }, []);
+
+  const checkFirstLaunch = async () => {
+    try {
+      const hasLaunched = await AsyncStorage.getItem('hasLaunched');
+      if (!hasLaunched) {
+        // Check if pet name is still default
+        const data = await AsyncStorage.getItem('petData');
+        if (!data || (data && JSON.parse(data).petName === 'EcoBuddy')) {
+          setShowNameModal(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking first launch:', error);
+    }
+  };
+
+  const handleSaveName = () => {
+    if (newPetName.trim().length === 0) {
+      Alert.alert('Invalid Name', 'Please enter a name for your pet!');
+      return;
+    }
+    if (newPetName.trim().length > 20) {
+      Alert.alert('Name Too Long', 'Please enter a name with 20 characters or less.');
+      return;
+    }
+    renamePet(newPetName.trim());
+    AsyncStorage.setItem('hasLaunched', 'true');
+    setShowNameModal(false);
+    setNewPetName('');
+  };
 
   return (
-    <ScrollView style={styles.container}>
-      <LinearGradient
-        colors={['#4CAF50', '#45a049']}
-        style={styles.header}
-      >
-        <Text style={styles.greeting}>Welcome back! 🌱</Text>
-        <Text style={styles.petName}>{petName}</Text>
-      </LinearGradient>
+    <>
+      <ScrollView style={styles.container}>
+        <LinearGradient
+          colors={['#4CAF50', '#45a049']}
+          style={styles.header}
+        >
+          <Text style={styles.greeting}>Welcome back! 🌱</Text>
+          <Text style={styles.petName}>{petName}</Text>
+        </LinearGradient>
 
       <View style={styles.content}>
         <View style={styles.petContainer}>
           <VirtualPet stage={petStage} />
+          <LevelUpAnimation visible={showLevelUp} />
         </View>
 
         <View style={styles.statsCard}>
@@ -74,6 +114,47 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
     </ScrollView>
+
+    <Modal
+      visible={showNameModal}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => {}}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalIconContainer}>
+            <Ionicons name="leaf" size={48} color="#4CAF50" />
+          </View>
+          <Text style={styles.modalTitle}>Welcome to EcoPet! 🌱</Text>
+          <Text style={styles.modalSubtitle}>Let's give your pet a name!</Text>
+          
+          <TextInput
+            style={styles.nameInput}
+            placeholder="Enter pet name..."
+            placeholderTextColor="#999"
+            value={newPetName}
+            onChangeText={setNewPetName}
+            maxLength={20}
+            autoFocus={true}
+            onSubmitEditing={handleSaveName}
+          />
+          
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSaveName}
+          >
+            <LinearGradient
+              colors={['#4CAF50', '#45a049']}
+              style={styles.saveButtonGradient}
+            >
+              <Text style={styles.saveButtonText}>Save Name</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -113,6 +194,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 5,
+    position: 'relative',
+    overflow: 'visible',
   },
   statsCard: {
     backgroundColor: '#fff',
@@ -214,6 +297,72 @@ const styles = StyleSheet.create({
     color: '#666',
     marginLeft: 10,
     lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 30,
+    width: '85%',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  modalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 25,
+    textAlign: 'center',
+  },
+  nameInput: {
+    width: '100%',
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+    borderRadius: 12,
+    padding: 15,
+    fontSize: 18,
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  saveButton: {
+    width: '100%',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  saveButtonGradient: {
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
 
