@@ -1,11 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { usePet } from '../context/PetContext';
 
 export default function ShopScreen() {
-  const { coins } = usePet(); 
+  const { coins, spendCoins } = usePet(); 
   const items = [
     {
       id: 1,
@@ -37,8 +37,24 @@ export default function ShopScreen() {
     },
   ];
 
-  const handlePurchase = (itemName) => {
-    alert(`You purchased ${itemName}! 🌿`);
+  const handlePurchase = (item) => {
+    if (coins >= item.price) {
+      const success = spendCoins(item.price);
+      if (success) {
+        const remainingCoins = coins - item.price;
+        Alert.alert(
+          'Purchase Successful! 🎉',
+          `You purchased ${item.name} for ${item.price} coins!\n\nRemaining coins: ${remainingCoins}`,
+          [{ text: 'Awesome!', style: 'default' }]
+        );
+      }
+    } else {
+      Alert.alert(
+        'Insufficient Coins 💰',
+        `You need ${item.price} coins to buy ${item.name}, but you only have ${coins} coins.\n\nComplete more tasks to earn coins!`,
+        [{ text: 'OK', style: 'default' }]
+      );
+    }
   };
 
   return (
@@ -52,7 +68,7 @@ export default function ShopScreen() {
         <View style={styles.balanceCard}>
           <Ionicons name="cash" size={28} color="#FFD700" />
           <Text style={styles.balanceText}>
-            Your Coins: <Text style={styles.balanceValue}>{coins ?? 250}</Text>
+            Your Coins: <Text style={styles.balanceValue}>{coins}</Text>
           </Text>
         </View>
 
@@ -68,7 +84,7 @@ export default function ShopScreen() {
 
             <TouchableOpacity
               style={styles.buyButton}
-              onPress={() => handlePurchase(item.name)}
+              onPress={() => handlePurchase(item)}
             >
               <LinearGradient colors={['#4CAF50', '#45a049']} style={styles.buttonGradient}>
                 <Ionicons name="cart" size={20} color="#fff" />

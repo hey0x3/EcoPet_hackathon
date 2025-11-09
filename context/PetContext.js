@@ -19,6 +19,12 @@ export const PetProvider = ({ children }) => {
   const [totalTasksCompleted, setTotalTasksCompleted] = useState(0);
   const [tasksToday, setTasksToday] = useState(0);
   const [lastTaskDate, setLastTaskDate] = useState(null);
+  const [coins, setCoins] = useState(250);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [litterPicked, setLitterPicked] = useState(0);
+  const [waterSaved, setWaterSaved] = useState(0);
+  const [co2Reduced, setCo2Reduced] = useState(0);
+  const [itemsRecycled, setItemsRecycled] = useState(0);
 
   // Yeni eklenen state'ler
   const [consecutiveDaysLogged, setConsecutiveDaysLogged] = useState(0);
@@ -34,6 +40,7 @@ export const PetProvider = ({ children }) => {
   useEffect(() => {
     savePetData();
   }, [exp, level, petStage, petName, totalTasksCompleted, tasksToday, lastTaskDate, consecutiveDaysLogged, hatsCollected, firstTaskDone, expPerLevel]);
+  }, [exp, level, petStage, petName, totalTasksCompleted, tasksToday, lastTaskDate, coins, litterPicked, waterSaved, co2Reduced, itemsRecycled]);
 
   // Level ve Stage kontrolü, EXP artırımı ile birlikte
   useEffect(() => {
@@ -42,6 +49,14 @@ export const PetProvider = ({ children }) => {
       newLevel++;
       // Yeni level atlandığında bir sonraki level için gereken EXP %10 artsın
       setExpPerLevel(prev => Math.floor(prev * 1.1));
+    const newLevel = Math.floor(exp / 100) + 1;
+    if (newLevel !== level && newLevel > level) {
+      setLevel(newLevel);
+      setShowLevelUp(true);
+      // Hide animation after 2 seconds (slightly longer than animation)
+      setTimeout(() => {
+        setShowLevelUp(false);
+      }, 2000);
     }
     if (newLevel !== level) setLevel(newLevel);
 
@@ -78,6 +93,11 @@ export const PetProvider = ({ children }) => {
         setHatsCollected(parsed.hatsCollected || 0);
         setFirstTaskDone(parsed.firstTaskDone || false);
         setExpPerLevel(parsed.expPerLevel || 100);
+        setCoins(parsed.coins !== undefined ? parsed.coins : 250);
+        setLitterPicked(parsed.litterPicked || 0);
+        setWaterSaved(parsed.waterSaved || 0);
+        setCo2Reduced(parsed.co2Reduced || 0);
+        setItemsRecycled(parsed.itemsRecycled || 0);
       }
     } catch (error) {
       console.error('Error loading pet data:', error);
@@ -98,6 +118,11 @@ export const PetProvider = ({ children }) => {
         hatsCollected,
         firstTaskDone,
         expPerLevel,
+        coins,
+        litterPicked,
+        waterSaved,
+        co2Reduced,
+        itemsRecycled,
       };
       await AsyncStorage.setItem('petData', JSON.stringify(data));
     } catch (error) {
@@ -123,7 +148,7 @@ export const PetProvider = ({ children }) => {
     setExp(prev => prev + finalExp);
   };
 
-  const completeTask = (expAmount) => {
+  const completeTask = (expAmount, taskId) => {
     const today = new Date().toDateString();
     if (lastTaskDate !== today) {
       setTasksToday(1);
@@ -134,6 +159,33 @@ export const PetProvider = ({ children }) => {
     setTotalTasksCompleted(prev => prev + 1);
     if (!firstTaskDone) setFirstTaskDone(true);
     addExp(expAmount);
+    // Award coins: 5 coins for every 100 EXP (1 coin per 20 EXP)
+    const coinsToAward = Math.floor((expAmount / 100) * 5);
+    if (coinsToAward > 0) {
+      addCoins(coinsToAward);
+    }
+    
+    // Track actual environmental impact based on task ID
+    // Task IDs: 1=Pick Up Litter, 2=Save Water, 3=Recycle, 4=Reusable Bag, 5=Walk/Bike, 6=Turn Off Lights, 7=Plant Tree, 8=Meatless Meal
+    if (taskId === 1) {
+      // Pick Up Litter: 5 pieces per task
+      setLitterPicked(prev => prev + 5);
+    } else if (taskId === 2) {
+      // Save Water: ~5 gallons per shorter shower
+      setWaterSaved(prev => prev + 5);
+    } else if (taskId === 3) {
+      // Recycle Properly: 3 items per task
+      setItemsRecycled(prev => prev + 3);
+    } else if (taskId === 5) {
+      // Walk or Bike: ~2kg CO2 reduced per trip
+      setCo2Reduced(prev => prev + 2);
+    } else if (taskId === 7) {
+      // Plant a Tree: ~10kg CO2 reduced over time
+      setCo2Reduced(prev => prev + 10);
+    } else if (taskId === 8) {
+      // Meatless Meal: ~2kg CO2 reduced per meal
+      setCo2Reduced(prev => prev + 2);
+    }
   };
 
   const renamePet = (newName) => setPetName(newName);
@@ -176,4 +228,43 @@ export const PetProvider = ({ children }) => {
       {children}
     </PetContext.Provider>
   );
+  const spendCoins = (amount) => {
+    let success = false;
+    setCoins(prev => {
+      if (prev >= amount) {
+        success = true;
+        return prev - amount;
+      }
+      return prev;
+    });
+    return success;
+  };
+
+  const addCoins = (amount) => {
+    setCoins(prev => prev + amount);
+  };
+
+  const value = {
+    exp,
+    level,
+    petStage,
+    petName,
+    totalTasksCompleted,
+    tasksToday,
+    coins,
+    showLevelUp,
+    litterPicked,
+    waterSaved,
+    co2Reduced,
+    itemsRecycled,
+    addExp,
+    completeTask,
+    renamePet,
+    expToNextLevel,
+    expProgress,
+    spendCoins,
+    addCoins,
+  };
+
+  return <PetContext.Provider value={value}>{children}</PetContext.Provider>;
 };
