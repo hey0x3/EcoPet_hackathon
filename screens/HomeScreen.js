@@ -87,9 +87,11 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.progressTitle}>Progress to Level {level + 1}</Text>
           <View style={styles.progressBarContainer}>
             <View style={[styles.progressBar, { width: `${expProgress()}%` }]} />
+            {/* Yüzdelik ilerlemeyi ortada göster */}
+            <Text style={styles.progressPercentage}>{Math.floor(expProgress())}%</Text>
           </View>
           <Text style={styles.progressText}>
-            {expToNextLevel()} EXP needed
+            {Math.floor(expToNextLevel())} EXP needed
           </Text>
         </View>
 
@@ -249,11 +251,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: 'hidden',
     marginBottom: 10,
+    justifyContent: 'center',
   },
   progressBar: {
     height: '100%',
     backgroundColor: '#4CAF50',
     borderRadius: 10,
+  },
+  progressPercentage: {
+    position: 'absolute',
+    alignSelf: 'center',
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
   progressText: {
     fontSize: 14,
@@ -365,4 +375,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-

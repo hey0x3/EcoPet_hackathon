@@ -14,6 +14,7 @@ export default function StatsScreen() {
     tasksToday,
     expProgress,
     expToNextLevel,
+    achievements, // PetContext'ten çekiyoruz
     litterPicked,
     waterSaved,
     co2Reduced,
@@ -30,6 +31,18 @@ export default function StatsScreen() {
     return stages[stage] || stage;
   };
 
+  const getImpactStats = () => {
+    const litterPicked = totalTasksCompleted * 0.3;
+    const waterSaved = totalTasksCompleted * 0.2 * 10;
+    const co2Reduced = totalTasksCompleted * 0.15 * 2;
+    const itemsRecycled = totalTasksCompleted * 0.25 * 3;
+
+    return {
+      litterPicked: Math.round(litterPicked),
+      waterSaved: Math.round(waterSaved),
+      co2Reduced: Math.round(co2Reduced * 10) / 10,
+      itemsRecycled: Math.round(itemsRecycled),
+    };
   const getAchievements = () => {
     const achievements = [];
     if (level >= 2) achievements.push({ name: 'First Steps', icon: 'footsteps', color: '#4CAF50' });
@@ -62,6 +75,7 @@ export default function StatsScreen() {
       </LinearGradient>
 
       <View style={styles.content}>
+        {/* Pet Progress */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Pet Progress</Text>
           <View style={styles.statCard}>
@@ -105,6 +119,7 @@ export default function StatsScreen() {
           </View>
         </View>
 
+        {/* Task Statistics */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Task Statistics</Text>
           <View style={styles.statCard}>
@@ -123,6 +138,7 @@ export default function StatsScreen() {
           </View>
         </View>
 
+        {/* Environmental Impact */}
         <View style={styles.statsSection}>
           <Text style={styles.sectionTitle}>Environmental Impact</Text>
           <View style={styles.impactCard}>
@@ -142,33 +158,46 @@ export default function StatsScreen() {
               <Text style={styles.impactLabel}>CO₂ emissions reduced</Text>
             </View>
             <View style={styles.impactItem}>
-              <Ionicons name="recycle" size={28} color="#45B7D1" />
+              <Ionicons name="refresh" size={28} color="#45B7D1" />
               <Text style={styles.impactValue}>{impact.itemsRecycled}</Text>
               <Text style={styles.impactLabel}>Items recycled</Text>
             </View>
           </View>
         </View>
 
-        {achievements.length > 0 && (
-          <View style={styles.statsSection}>
-            <Text style={styles.sectionTitle}>Achievements</Text>
-            <View style={styles.achievementsContainer}>
-              {achievements.map((achievement, index) => (
-                <View key={index} style={styles.achievementBadge}>
-                  <Ionicons name={achievement.icon} size={32} color={achievement.color} />
-                  <Text style={styles.achievementName}>{achievement.name}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        <View style={styles.motivationCard}>
-          <Ionicons name="heart" size={32} color="#FF6B6B" />
-          <Text style={styles.motivationText}>
-            Every action counts! Keep up the amazing work in protecting our planet! 🌍💚
-          </Text>
+{/* Achievements */}
+{achievements.length > 0 && (
+  <View style={styles.statsSection}>
+    <Text style={styles.sectionTitle}>Achievements</Text>
+    <View style={styles.achievementsContainer}>
+      {achievements.map((ach, index) => (
+        <View key={index} style={styles.achievementBadge}>
+          {/* İkon: unlock olmuşsa renkli, değilse gri */}
+          <Ionicons
+            name={ach.unlocked ? "ribbon" : "lock-closed"} 
+            size={32}
+            color={ach.unlocked ? '#FFD700' : '#ccc'}
+          />
+          {/* Başlık */}
+          <Text style={styles.achievementName}>{ach.name}</Text>
+          {/* EXP boost, sadece unlock olmuşsa göster */}
+          {ach.unlocked && ach.expBoostPercent && (
+            <Text style={{ fontSize: 12, color: '#4CAF50', marginTop: 4 }}>
+              +{ach.expBoostPercent}% EXP
+            </Text>
+          )}
+          {/* Kilitli başarımlar için ipucu */}
+          {!ach.unlocked && (
+            <Text style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+              Locked
+            </Text>
+          )}
         </View>
+      ))}
+    </View>
+  </View>
+)}
+
       </View>
     </ScrollView>
   );
@@ -323,21 +352,4 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textAlign: 'center',
   },
-  motivationCard: {
-    backgroundColor: '#FFF0F5',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF6B6B',
-    marginTop: 10,
-  },
-  motivationText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 10,
-    lineHeight: 24,
-  },
 });
-

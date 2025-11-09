@@ -31,7 +31,7 @@ export default function VirtualPet({ stage }) {
         };
       case 'adult':
         return {
-          icon: 'tree',
+          icon: 'leaf',
           size: 140,
           color: '#4CAF50',
           emoji: '🌳',
