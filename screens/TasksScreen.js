@@ -40,7 +40,7 @@ const TASKS = [
     title: 'Recycle Properly',
     description: 'Sort and recycle 3 items correctly',
     exp: 30,
-    icon: 'recycle',
+    icon: 'refresh',
     color: '#45B7D1',
     category: 'Waste Reduction',
     tips: [

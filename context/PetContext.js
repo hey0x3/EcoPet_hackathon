@@ -14,46 +14,51 @@ export const usePet = () => {
 export const PetProvider = ({ children }) => {
   const [exp, setExp] = useState(0);
   const [level, setLevel] = useState(1);
-  const [petStage, setPetStage] = useState('egg'); // egg, baby, teen, adult
+  const [petStage, setPetStage] = useState('egg');
   const [petName, setPetName] = useState('EcoBuddy');
   const [totalTasksCompleted, setTotalTasksCompleted] = useState(0);
   const [tasksToday, setTasksToday] = useState(0);
   const [lastTaskDate, setLastTaskDate] = useState(null);
 
-  // Load data from storage on mount
+  // Yeni eklenen state'ler
+  const [consecutiveDaysLogged, setConsecutiveDaysLogged] = useState(0);
+  const [hatsCollected, setHatsCollected] = useState(0);
+  const [firstTaskDone, setFirstTaskDone] = useState(false);
+  const [expPerLevel, setExpPerLevel] = useState(100); // Her level için gereken EXP, başlangıç 100
+
+  // Load data on mount
   useEffect(() => {
     loadPetData();
   }, []);
 
-  // Save data whenever it changes
   useEffect(() => {
     savePetData();
-  }, [exp, level, petStage, petName, totalTasksCompleted, tasksToday, lastTaskDate]);
+  }, [exp, level, petStage, petName, totalTasksCompleted, tasksToday, lastTaskDate, consecutiveDaysLogged, hatsCollected, firstTaskDone, expPerLevel]);
 
-  // Update level and stage based on EXP
+  // Level ve Stage kontrolü, EXP artırımı ile birlikte
   useEffect(() => {
-    const newLevel = Math.floor(exp / 100) + 1;
-    if (newLevel !== level) {
-      setLevel(newLevel);
+    let newLevel = level;
+    while (exp >= expPerLevel * newLevel) {
+      newLevel++;
+      // Yeni level atlandığında bir sonraki level için gereken EXP %10 artsın
+      setExpPerLevel(prev => Math.floor(prev * 1.1));
     }
+    if (newLevel !== level) setLevel(newLevel);
 
-    // Determine pet stage based on level
     let newStage = 'egg';
-    if (level >= 5) newStage = 'adult';
-    else if (level >= 3) newStage = 'teen';
-    else if (level >= 2) newStage = 'baby';
+    if (newLevel >= 10) newStage = 'adult';
+    else if (newLevel >= 5) newStage = 'teen';
+    else if (newLevel >= 2) newStage = 'baby';
 
-    if (newStage !== petStage) {
-      setPetStage(newStage);
-    }
-  }, [exp, level]);
+    if (newStage !== petStage) setPetStage(newStage);
+  }, [exp]);
 
-  // Reset daily tasks if it's a new day
   useEffect(() => {
     const today = new Date().toDateString();
     if (lastTaskDate !== today) {
       setTasksToday(0);
       setLastTaskDate(today);
+      setConsecutiveDaysLogged(prev => prev + 1); // günlük giriş sayısı
     }
   }, []);
 
@@ -69,6 +74,10 @@ export const PetProvider = ({ children }) => {
         setTotalTasksCompleted(parsed.totalTasksCompleted || 0);
         setTasksToday(parsed.tasksToday || 0);
         setLastTaskDate(parsed.lastTaskDate || null);
+        setConsecutiveDaysLogged(parsed.consecutiveDaysLogged || 0);
+        setHatsCollected(parsed.hatsCollected || 0);
+        setFirstTaskDone(parsed.firstTaskDone || false);
+        setExpPerLevel(parsed.expPerLevel || 100);
       }
     } catch (error) {
       console.error('Error loading pet data:', error);
@@ -85,6 +94,10 @@ export const PetProvider = ({ children }) => {
         totalTasksCompleted,
         tasksToday,
         lastTaskDate,
+        consecutiveDaysLogged,
+        hatsCollected,
+        firstTaskDone,
+        expPerLevel,
       };
       await AsyncStorage.setItem('petData', JSON.stringify(data));
     } catch (error) {
@@ -92,8 +105,22 @@ export const PetProvider = ({ children }) => {
     }
   };
 
+  // -----------------------------
+  // EXP ekleme fonksiyonu (% bonus)
   const addExp = (amount) => {
-    setExp(prev => prev + amount);
+    const achievementsList = [
+      { name: 'First Task', unlocked: firstTaskDone, expBoostPercent: 1 },
+      { name: '7 Days Login', unlocked: consecutiveDaysLogged >= 7, expBoostPercent: 2 },
+      { name: '5 Hats Collected', unlocked: hatsCollected >= 5, expBoostPercent: 3 },
+      { name: 'Level 10 Pet', unlocked: level >= 10, expBoostPercent: 5 },
+    ];
+
+    const totalBonusPercent = achievementsList
+      .filter(ach => ach.unlocked)
+      .reduce((acc, ach) => acc + ach.expBoostPercent, 0);
+
+    const finalExp = amount * (1 + totalBonusPercent / 100);
+    setExp(prev => prev + finalExp);
   };
 
   const completeTask = (expAmount) => {
@@ -105,39 +132,48 @@ export const PetProvider = ({ children }) => {
       setTasksToday(prev => prev + 1);
     }
     setTotalTasksCompleted(prev => prev + 1);
+    if (!firstTaskDone) setFirstTaskDone(true);
     addExp(expAmount);
   };
 
-  const renamePet = (newName) => {
-    setPetName(newName);
-  };
+  const renamePet = (newName) => setPetName(newName);
 
   const expToNextLevel = () => {
-    return (level * 100) - exp;
+    return Math.floor(expPerLevel * level - exp);
   };
 
   const expProgress = () => {
-    const currentLevelExp = (level - 1) * 100;
-    const nextLevelExp = level * 100;
-    const expInCurrentLevel = exp - currentLevelExp;
-    const expNeededForLevel = nextLevelExp - currentLevelExp;
-    return (expInCurrentLevel / expNeededForLevel) * 100;
+    const currentLevelExp = expPerLevel * (level - 1);
+    const nextLevelExp = expPerLevel * level;
+    return ((exp - currentLevelExp) / (nextLevelExp - currentLevelExp)) * 100;
   };
 
-  const value = {
-    exp,
-    level,
-    petStage,
-    petName,
-    totalTasksCompleted,
-    tasksToday,
-    addExp,
-    completeTask,
-    renamePet,
-    expToNextLevel,
-    expProgress,
-  };
+  const achievements = [
+    { name: 'First Task', unlocked: firstTaskDone, expBoostPercent: 1 },
+    { name: '7 Days Login', unlocked: consecutiveDaysLogged >= 7, expBoostPercent: 2 },
+    { name: '5 Hats Collected', unlocked: hatsCollected >= 5, expBoostPercent: 3 },
+    { name: 'Level 10 Pet', unlocked: level >= 10, expBoostPercent: 5 },
+  ];
 
-  return <PetContext.Provider value={value}>{children}</PetContext.Provider>;
+  return (
+    <PetContext.Provider value={{
+      exp,
+      level,
+      petStage,
+      petName,
+      totalTasksCompleted,
+      tasksToday,
+      addExp,
+      completeTask,
+      renamePet,
+      expToNextLevel,
+      expProgress,
+      achievements,
+      consecutiveDaysLogged,
+      hatsCollected,
+      expPerLevel
+    }}>
+      {children}
+    </PetContext.Provider>
+  );
 };
-
