@@ -1,13 +1,13 @@
+import { StatusBar } from 'expo-status-bar';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
-
 import HomeScreen from './screens/HomeScreen';
 import TasksScreen from './screens/TasksScreen';
 import EducationScreen from './screens/EducationScreen';
 import StatsScreen from './screens/StatsScreen';
+import ShopScreen from './screens/ShopScreen';   
 import { PetProvider } from './context/PetContext';
 
 const Tab = createBottomTabNavigator();
@@ -30,6 +30,8 @@ export default function App() {
                 iconName = focused ? 'book' : 'book-outline';
               } else if (route.name === 'Stats') {
                 iconName = focused ? 'stats-chart' : 'stats-chart-outline';
+              } else if (route.name === 'Shop') {  
+                iconName = focused ? 'cart' : 'cart-outline';
               }
 
               return <Ionicons name={iconName} size={size} color={color} />;
@@ -49,9 +51,9 @@ export default function App() {
           <Tab.Screen name="Tasks" component={TasksScreen} />
           <Tab.Screen name="Learn" component={EducationScreen} />
           <Tab.Screen name="Stats" component={StatsScreen} />
+          <Tab.Screen name="Shop" component={ShopScreen} />  
         </Tab.Navigator>
       </NavigationContainer>
     </PetProvider>
   );
 }
-
