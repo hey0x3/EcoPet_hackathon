@@ -1,50 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePet } from '../context/PetContext';
 import VirtualPet from '../components/VirtualPet';
 import LevelUpAnimation from '../components/LevelUpAnimation';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLanguage } from '../src/i18n/LanguageContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function HomeScreen({ navigation }) {
-  const { level, exp, petName, petStage, expProgress, expToNextLevel, tasksToday, showLevelUp, renamePet } = usePet();
-  const [showNameModal, setShowNameModal] = useState(false);
-  const [newPetName, setNewPetName] = useState('');
+  const { level, exp, petName, petStage, expProgress, expToNextLevel, tasksToday, showLevelUp } = usePet();
+  const { t } = useLanguage();
+  const [greeting, setGreeting] = useState('');
+  const [name, setName] = useState('');
+  const [pet, setPet] = useState('');
 
-  useEffect(() => {
-    checkFirstLaunch();
-  }, []);
+  // Reload names every time screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      (async () => {
+        const savedName = await AsyncStorage.getItem('profile.name') || '';
+        const savedPet = await AsyncStorage.getItem('pet.name') || '';
+        
+        setName(savedName);
+        setPet(savedPet);
 
-  const checkFirstLaunch = async () => {
-    try {
-      const hasLaunched = await AsyncStorage.getItem('hasLaunched');
-      if (!hasLaunched) {
-        // Check if pet name is still default
-        const data = await AsyncStorage.getItem('petData');
-        if (!data || (data && JSON.parse(data).petName === 'EcoBuddy')) {
-          setShowNameModal(true);
-        }
-      }
-    } catch (error) {
-      console.error('Error checking first launch:', error);
-    }
-  };
-
-  const handleSaveName = () => {
-    if (newPetName.trim().length === 0) {
-      Alert.alert('Invalid Name', 'Please enter a name for your pet!');
-      return;
-    }
-    if (newPetName.trim().length > 20) {
-      Alert.alert('Name Too Long', 'Please enter a name with 20 characters or less.');
-      return;
-    }
-    renamePet(newPetName.trim());
-    AsyncStorage.setItem('hasLaunched', 'true');
-    setShowNameModal(false);
-    setNewPetName('');
-  };
+        // Build greeting: "Hello [name]" only
+        const greetingText = savedName ? `Hello ${savedName}! 🌱` : 'Welcome! 🌱';
+        
+        setGreeting(greetingText);
+      })();
+    }, [])
+  );
 
   return (
     <>
@@ -53,8 +41,8 @@ export default function HomeScreen({ navigation }) {
           colors={['#4CAF50', '#45a049']}
           style={styles.header}
         >
-          <Text style={styles.greeting}>Welcome back! 🌱</Text>
-          <Text style={styles.petName}>{petName}</Text>
+          <Text style={styles.greeting}>{greeting}</Text>
+          <Text style={styles.petName}>{pet || petName}</Text>
         </LinearGradient>
 
       <View style={styles.content}>
@@ -95,19 +83,6 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('Tasks')}
-        >
-          <LinearGradient
-            colors={['#4CAF50', '#45a049']}
-            style={styles.buttonGradient}
-          >
-            <Ionicons name="add-circle" size={24} color="#fff" />
-            <Text style={styles.buttonText}>Complete a Task</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-
         <View style={styles.tipCard}>
           <Ionicons name="bulb" size={24} color="#FFD700" />
           <Text style={styles.tipText}>
@@ -116,46 +91,6 @@ export default function HomeScreen({ navigation }) {
         </View>
       </View>
     </ScrollView>
-
-    <Modal
-      visible={showNameModal}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={() => {}}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalIconContainer}>
-            <Ionicons name="leaf" size={48} color="#4CAF50" />
-          </View>
-          <Text style={styles.modalTitle}>Welcome to EcoPet! 🌱</Text>
-          <Text style={styles.modalSubtitle}>Let's give your pet a name!</Text>
-          
-          <TextInput
-            style={styles.nameInput}
-            placeholder="Enter pet name..."
-            placeholderTextColor="#999"
-            value={newPetName}
-            onChangeText={setNewPetName}
-            maxLength={20}
-            autoFocus={true}
-            onSubmitEditing={handleSaveName}
-          />
-          
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleSaveName}
-          >
-            <LinearGradient
-              colors={['#4CAF50', '#45a049']}
-              style={styles.saveButtonGradient}
-            >
-              <Text style={styles.saveButtonText}>Save Name</Text>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
     </>
   );
 }

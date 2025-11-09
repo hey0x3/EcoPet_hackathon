@@ -1,23 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../src/i18n/LanguageContext';
 
 export default function SettingsScreen({ navigation }) {
+  const { t } = useLanguage();
+
   const settingsOptions = [
-    { id: 1, title: 'Profile', icon: 'person-outline' },
-    { id: 2, title: 'Notifications', icon: 'notifications-outline' },
-    { id: 3, title: 'Language', icon: 'language-outline' },
-    { id: 4, title: 'About', icon: 'information-circle-outline' },
-    { id: 5, title: 'Log out', icon: 'log-out-outline' },
+    { id: 1, key: 'profile', icon: 'person-outline', screen: 'Profile' },
+    { id: 2, key: 'notifications', icon: 'notifications-outline', screen: 'Notifications' },
+    { id: 3, key: 'language', icon: 'language-outline', screen: 'Language' },
+    { id: 4, key: 'about', icon: 'information-circle-outline', screen: 'About' },
+    { id: 5, key: 'reset', icon: 'log-out-outline', screen: 'Reset' },
   ];
 
   const handleOptionPress = (option) => {
-    // Handle navigation or action for each option
-    if (option.title === 'Log out') {
-      // Add logout logic here if needed
-      console.log('Log out pressed');
-    } else {
-      console.log(`${option.title} pressed`);
+    if (option.screen) {
+      navigation.navigate(option.screen);
     }
   };
 
@@ -33,7 +32,7 @@ export default function SettingsScreen({ navigation }) {
             >
               <View style={styles.optionLeft}>
                 <Ionicons name={option.icon} size={24} color="#333" style={styles.optionIcon} />
-                <Text style={styles.optionText}>{option.title}</Text>
+                <Text style={styles.optionText}>{t(option.key)}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color="#999" />
             </TouchableOpacity>
