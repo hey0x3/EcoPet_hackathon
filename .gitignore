@@ -18,6 +18,9 @@ dist/
 .env
 .env.local
 
+# API Keys
+config/api.js
+
 # IDE
 .vscode/
 .idea/

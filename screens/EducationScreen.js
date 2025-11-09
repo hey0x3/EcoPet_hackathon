@@ -1,209 +1,317 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GROQ_API_KEY } from '../config/api';
 
-const EDUCATIONAL_CONTENT = [
-  {
-    id: 1,
-    title: 'Climate Change Basics',
-    icon: 'globe',
-    color: '#4CAF50',
-    content: `Climate change refers to long-term shifts in global temperatures and weather patterns. While climate variations are natural, human activities since the mid-20th century have been the primary driver of climate change.
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-Key Facts:
-• Global temperatures have risen about 1.1°C since 1880
-• The last decade was the warmest on record
-• Sea levels are rising at an accelerating rate
-• Extreme weather events are becoming more frequent
-
-What causes it?
-The main cause is the greenhouse effect, where gases like CO2 trap heat in Earth's atmosphere. Burning fossil fuels, deforestation, and industrial processes increase these gases.`,
-  },
-  {
-    id: 2,
-    title: 'Why Waste Reduction Matters',
-    icon: 'trash',
-    color: '#FF6B6B',
-    content: `Waste reduction is crucial for protecting our planet. Every item we throw away has an environmental cost.
-
-The Problem:
-• Landfills produce methane, a potent greenhouse gas
-• Plastic waste harms marine life and ecosystems
-• Manufacturing new products consumes energy and resources
-• Waste often ends up in oceans and natural habitats
-
-The Solution:
-• Reduce: Buy only what you need
-• Reuse: Find new purposes for items
-• Recycle: Turn waste into new products
-• Compost: Turn organic waste into soil nutrients
-
-Small actions add up! Every piece of litter picked up, every item recycled, makes a difference.`,
-  },
-  {
-    id: 3,
-    title: 'Water Conservation',
-    icon: 'water',
-    color: '#4ECDC4',
-    content: `Water is essential for life, but it's a finite resource. Only 2.5% of Earth's water is fresh, and less than 1% is accessible.
-
-Why Save Water?
-• Reduces energy needed for water treatment
-• Preserves ecosystems and wildlife
-• Ensures water availability for future generations
-• Saves money on utility bills
-
-Simple Ways to Conserve:
-• Take shorter showers (saves 2.5 gallons per minute)
-• Fix leaks immediately
-• Use water-efficient appliances
-• Collect rainwater for plants
-• Turn off taps when not in use
-
-Every drop counts! A 5-minute shower uses about 10-25 gallons of water.`,
-  },
-  {
-    id: 4,
-    title: 'Renewable Energy',
-    icon: 'flash',
-    color: '#FFD700',
-    content: `Renewable energy comes from natural sources that are constantly replenished, unlike fossil fuels.
-
-Types of Renewable Energy:
-• Solar: Energy from the sun
-• Wind: Energy from wind turbines
-• Hydroelectric: Energy from flowing water
-• Geothermal: Energy from Earth's heat
-• Biomass: Energy from organic materials
-
-Benefits:
-• Reduces greenhouse gas emissions
-• Creates sustainable energy supply
-• Decreases air pollution
-• Creates green jobs
-• Reduces dependence on fossil fuels
-
-What You Can Do:
-• Support renewable energy programs
-• Use energy-efficient appliances
-• Turn off lights and electronics when not in use
-• Consider solar panels for your home
-• Choose green energy providers`,
-  },
-  {
-    id: 5,
-    title: 'Sustainable Transportation',
-    icon: 'bicycle',
-    color: '#95E1D3',
-    content: `Transportation accounts for a significant portion of global greenhouse gas emissions.
-
-The Impact:
-• Cars and trucks produce about 20% of CO2 emissions
-• Air travel has a large carbon footprint
-• Traffic congestion wastes fuel and time
-• Vehicle manufacturing consumes resources
-
-Eco-Friendly Alternatives:
-• Walk or bike for short trips
-• Use public transportation
-• Carpool with others
-• Choose electric or hybrid vehicles
-• Plan efficient routes
-
-Benefits:
-• Reduces air pollution
-• Saves money on fuel
-• Improves physical health
-• Reduces traffic congestion
-• Lowers carbon footprint
-
-Every mile you walk or bike instead of driving saves about 0.4 kg of CO2!`,
-  },
-  {
-    id: 6,
-    title: 'The Power of Trees',
-    icon: 'leaf',
-    color: '#6BCB77',
-    content: `Trees are nature's superheroes in the fight against climate change.
-
-What Trees Do:
-• Absorb CO2 from the atmosphere
-• Produce oxygen we breathe
-• Provide habitat for wildlife
-• Cool urban areas
-• Prevent soil erosion
-• Filter air and water
-
-The Numbers:
-• One tree can absorb 48 pounds of CO2 per year
-• A mature tree produces enough oxygen for 2-10 people
-• Trees can reduce energy costs by 20-50%
-• Urban trees remove 711,000 tons of air pollution annually
-
-How to Help:
-• Plant native trees in your area
-• Support reforestation projects
-• Care for existing trees
-• Choose sustainable wood products
-• Reduce paper consumption
-
-Remember: The best time to plant a tree was 20 years ago. The second best time is now!`,
-  },
+const SUGGESTIONS = [
+  'How can I reduce my carbon footprint?',
+  'What are simple ways to save water?',
+  'Explain climate change in simple terms',
+  'How does recycling help the environment?',
+  'What are renewable energy sources?',
+  'How can I make my home more eco-friendly?',
 ];
 
 export default function EducationScreen() {
-  const [expandedCard, setExpandedCard] = useState(null);
+  const insets = useSafeAreaInsets();
+  const [messages, setMessages] = useState([
+    {
+      id: 1,
+      text: "Hi! I'm your eco-friendly AI assistant. Ask me anything about climate change, sustainability, or how to help the environment! 🌱",
+      isUser: false,
+      timestamp: new Date(),
+    },
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollViewRef = useRef(null);
+  const inputRef = useRef(null);
+  const conversationHistory = useRef([
+    {
+      role: 'system',
+      content:
+        'You are a friendly and knowledgeable eco-friendly AI assistant. Help users learn about climate change, sustainability, and environmental protection. Keep responses concise, engaging, and educational. Use emojis occasionally to make it fun. Focus on actionable advice.',
+    },
+  ]);
 
-  const toggleCard = (id) => {
-    setExpandedCard(expandedCard === id ? null : id);
+  useEffect(() => {
+    // Auto-scroll to bottom when new messages arrive
+    scrollViewRef.current?.scrollToEnd({ animated: true });
+  }, [messages]);
+
+  const sendMessage = async (messageText = null) => {
+    const textToSend = messageText || inputText.trim();
+    if (!textToSend || isLoading) return;
+
+    const userMessage = {
+      id: Date.now(),
+      text: textToSend,
+      isUser: true,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInputText('');
+    setIsLoading(true);
+
+    // Add user message to conversation history
+    conversationHistory.current.push({
+      role: 'user',
+      content: textToSend,
+    });
+
+    try {
+      // Check if API key is configured
+      if (!GROQ_API_KEY || GROQ_API_KEY === 'YOUR_GROQ_API_KEY_HERE') {
+        throw new Error('API key not configured. Please add your Groq API key in config/api.js');
+      }
+
+      // Keep only last 10 messages for context (to avoid token limits)
+      const messagesToSend = conversationHistory.current.slice(-11);
+
+      const response = await fetch(GROQ_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: messagesToSend,
+          temperature: 0.7,
+          max_tokens: 500,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || `API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiMessage = data.choices[0]?.message?.content || 'Sorry, I could not process that request.';
+
+      // Add AI response to conversation history
+      conversationHistory.current.push({
+        role: 'assistant',
+        content: aiMessage,
+      });
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          text: aiMessage,
+          isUser: false,
+          timestamp: new Date(),
+        },
+      ]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          text: `Sorry, I encountered an error: ${error.message}. Please try again.`,
+          isUser: false,
+          timestamp: new Date(),
+          isError: true,
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const handleSuggestionPress = (suggestion) => {
+    setInputText(suggestion);
+    inputRef.current?.focus();
+    // Auto-send after a brief delay
+    setTimeout(() => {
+      sendMessage(suggestion);
+    }, 100);
+  };
+
+  const clearChat = () => {
+    setMessages([
+      {
+        id: 1,
+        text: "Hi! I'm your eco-friendly AI assistant. Ask me anything about climate change, sustainability, or how to help the environment! 🌱",
+        isUser: false,
+        timestamp: new Date(),
+      },
+    ]);
+    // Reset conversation history
+    conversationHistory.current = [
+      {
+        role: 'system',
+        content:
+          'You are a friendly and knowledgeable eco-friendly AI assistant. Help users learn about climate change, sustainability, and environmental protection. Keep responses concise, engaging, and educational. Use emojis occasionally to make it fun. Focus on actionable advice.',
+      },
+    ];
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const showSuggestions = messages.length === 1 && !isLoading;
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Learn About Climate Change</Text>
-        <Text style={styles.headerSubtitle}>
-          Expand your knowledge and become a climate champion!
-        </Text>
-      </View>
-
-      <View style={styles.contentContainer}>
-        {EDUCATIONAL_CONTENT.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={styles.card}
-            onPress={() => toggleCard(item.id)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.cardHeader}>
-              <View style={[styles.iconContainer, { backgroundColor: `${item.color}20` }]}>
-                <Ionicons name={item.icon} size={32} color={item.color} />
+    <SafeAreaView style={styles.container} edges={[]}>
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
+        <LinearGradient
+          colors={['#4CAF50', '#45a049', '#3d8b40']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.headerLeft}>
+              <View style={styles.headerIconContainer}>
+                <Ionicons name="sparkles" size={22} color="#fff" />
               </View>
-              <View style={styles.cardHeaderText}>
-                <Text style={styles.cardTitle}>{item.title}</Text>
+              <View style={styles.headerTextContainer}>
+                <Text style={styles.headerTitle}>Eco AI Assistant</Text>
+                <Text style={styles.headerSubtitle}>Your climate change guide 🌱</Text>
               </View>
-              <Ionicons
-                name={expandedCard === item.id ? 'chevron-up' : 'chevron-down'}
-                size={24}
-                color="#999"
-              />
             </View>
-            {expandedCard === item.id && (
-              <View style={styles.cardContent}>
-                <Text style={styles.cardText}>{item.content}</Text>
+            <View style={styles.headerRight}>
+              <View style={styles.statusIndicator}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>Online</Text>
               </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
+            </View>
+          </View>
+        </LinearGradient>
 
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          🌍 Knowledge is power! Keep learning and taking action.
-        </Text>
-      </View>
-    </ScrollView>
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          keyboardShouldPersistTaps="handled"
+        >
+          {messages.map((message) => (
+            <View
+              key={message.id}
+              style={[styles.messageWrapper, message.isUser ? styles.userMessageWrapper : styles.aiMessageWrapper]}
+            >
+              {message.isUser ? (
+                <View
+                  style={[
+                    styles.messageBubble,
+                    styles.userBubble,
+                    message.isError && styles.errorBubble,
+                  ]}
+                >
+                  <Text style={styles.userText}>{message.text}</Text>
+                  <Text style={styles.userTimestamp}>{formatTime(message.timestamp)}</Text>
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.messageBubble,
+                    styles.aiBubble,
+                    message.isError && styles.errorBubble,
+                  ]}
+                >
+                  <View style={styles.aiIcon}>
+                    <Ionicons name="leaf" size={16} color="#4CAF50" />
+                  </View>
+                  <View style={styles.messageTextContainer}>
+                    <Text style={styles.aiText}>{message.text}</Text>
+                    <Text style={styles.aiTimestamp}>{formatTime(message.timestamp)}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          ))}
+
+          {isLoading && (
+            <View style={styles.loadingWrapper}>
+              <View style={[styles.messageBubble, styles.aiBubble]}>
+                <View style={styles.aiIcon}>
+                  <Ionicons name="leaf" size={16} color="#4CAF50" />
+                </View>
+                <View style={styles.messageTextContainer}>
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#4CAF50" />
+                    <Text style={styles.loadingText}>Thinking...</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {showSuggestions && (
+            <View style={styles.suggestionsContainer}>
+              <Text style={styles.suggestionsTitle}>💡 Try asking:</Text>
+              <View style={styles.suggestionsGrid}>
+                {SUGGESTIONS.map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.suggestionChip}
+                    onPress={() => handleSuggestionPress(suggestion)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.suggestionText}>{suggestion}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        <View style={[styles.inputContainer, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          <View style={styles.inputRow}>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder="Ask about climate change, sustainability..."
+              placeholderTextColor="#999"
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+              editable={!isLoading}
+              returnKeyType="send"
+              onSubmitEditing={() => sendMessage()}
+              blurOnSubmit={false}
+            />
+            <TouchableOpacity
+              style={[styles.sendButton, (!inputText.trim() || isLoading) && styles.sendButtonDisabled]}
+              onPress={() => sendMessage()}
+              disabled={!inputText.trim() || isLoading}
+            >
+              <Ionicons name="send" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity style={styles.clearButton} onPress={clearChat}>
+            <Ionicons name="trash-outline" size={14} color="#666" />
+            <Text style={styles.clearButtonText}>Clear</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -212,79 +320,262 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-  },
-  contentContainer: {
-    padding: 15,
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
-    overflow: 'hidden',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-  },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 15,
-  },
-  cardHeaderText: {
+  keyboardView: {
     flex: 1,
   },
-  cardTitle: {
+  header: {
+    paddingTop: 12,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
+    letterSpacing: 0.3,
   },
-  cardContent: {
-    paddingHorizontal: 20,
+  headerSubtitle: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 3,
+    fontWeight: '500',
+  },
+  headerRight: {
+    alignItems: 'flex-end',
+  },
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#81C784',
+    marginRight: 6,
+    shadowColor: '#81C784',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statusText: {
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  messagesContainer: {
+    flex: 1,
+  },
+  messagesContent: {
+    padding: 15,
+    paddingTop: 20,
     paddingBottom: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
   },
-  cardText: {
+  messageWrapper: {
+    marginBottom: 15,
+    maxWidth: '85%',
+  },
+  userMessageWrapper: {
+    alignSelf: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  aiMessageWrapper: {
+    alignSelf: 'flex-start',
+    alignItems: 'flex-start',
+  },
+  messageBubble: {
+    padding: 12,
+    borderRadius: 18,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  userBubble: {
+    backgroundColor: '#4CAF50',
+    borderBottomRightRadius: 4,
+    maxWidth: '100%',
+  },
+  aiBubble: {
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: 4,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    maxWidth: '100%',
+  },
+  errorBubble: {
+    backgroundColor: '#ffebee',
+    borderColor: '#f44336',
+    borderWidth: 1,
+  },
+  aiIcon: {
+    marginRight: 8,
+    marginTop: 2,
+    flexShrink: 0,
+  },
+  messageTextContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
+  userText: {
+    color: '#fff',
     fontSize: 15,
-    color: '#666',
-    lineHeight: 24,
-    marginTop: 15,
+    lineHeight: 20,
   },
-  footer: {
-    padding: 20,
+  aiText: {
+    color: '#333',
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  timestamp: {
+    fontSize: 10,
+    marginTop: 4,
+  },
+  userTimestamp: {
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  aiTimestamp: {
+    color: '#999',
+  },
+  loadingWrapper: {
+    marginBottom: 15,
+    alignSelf: 'flex-start',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  footerText: {
-    fontSize: 14,
+  loadingText: {
+    marginLeft: 8,
     color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
+    fontSize: 14,
+  },
+  suggestionsContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  suggestionsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  suggestionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  suggestionChip: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  suggestionText: {
+    fontSize: 13,
+    color: '#2E7D32',
+    fontWeight: '500',
+  },
+  inputContainer: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 15,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8f8f8',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 8,
+    minHeight: 48,
+  },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+    maxHeight: 100,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    textAlignVertical: 'center',
+  },
+  sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#ccc',
+    opacity: 0.5,
+  },
+  clearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  clearButtonText: {
+    fontSize: 11,
+    color: '#666',
+    marginLeft: 4,
   },
 });
-
