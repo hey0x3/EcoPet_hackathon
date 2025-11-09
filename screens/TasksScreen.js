@@ -39,7 +39,7 @@ const TASKS = [
     id: 3,
     title: 'Recycle Properly',
     description: 'Sort and recycle 3 items correctly',
-    exp: 30,
+    exp: 40,
     icon: 'recycle',
     color: '#45B7D1',
     category: 'Waste Reduction',
@@ -54,7 +54,7 @@ const TASKS = [
     id: 4,
     title: 'Use Reusable Bag',
     description: 'Use a reusable bag instead of plastic',
-    exp: 15,
+    exp: 20,
     icon: 'bag',
     color: '#96CEB4',
     category: 'Waste Reduction',
@@ -69,7 +69,7 @@ const TASKS = [
     id: 5,
     title: 'Walk or Bike',
     description: 'Walk or bike instead of driving for short trips',
-    exp: 35,
+    exp: 40,
     icon: 'bicycle',
     color: '#95E1D3',
     category: 'Transportation',
@@ -84,7 +84,7 @@ const TASKS = [
     id: 6,
     title: 'Turn Off Lights',
     description: 'Turn off lights when leaving a room',
-    exp: 10,
+    exp: 20,
     icon: 'bulb',
     color: '#FFD93D',
     category: 'Energy Conservation',
@@ -99,7 +99,7 @@ const TASKS = [
     id: 7,
     title: 'Plant a Tree',
     description: 'Plant a tree or care for existing plants',
-    exp: 50,
+    exp: 60,
     icon: 'leaf',
     color: '#6BCB77',
     category: 'Nature',
@@ -114,7 +114,7 @@ const TASKS = [
     id: 8,
     title: 'Meatless Meal',
     description: 'Have a vegetarian or vegan meal',
-    exp: 30,
+    exp: 40,
     icon: 'restaurant',
     color: '#F38BA8',
     category: 'Food',
@@ -133,14 +133,15 @@ export default function TasksScreen() {
   const [modalVisible, setModalVisible] = useState(false);
 
   const handleCompleteTask = (task) => {
+    const coinsEarned = Math.floor((task.exp / 100) * 5);
     Alert.alert(
       'Task Completed! 🎉',
-      `You earned ${task.exp} EXP!\n\n${task.description}`,
+      `You earned ${task.exp} EXP${coinsEarned > 0 ? ` and ${coinsEarned} coins` : ''}!\n\n${task.description}`,
       [
         {
           text: 'Awesome!',
           onPress: () => {
-            completeTask(task.exp);
+            completeTask(task.exp, task.id);
             setModalVisible(false);
           },
         },
@@ -205,6 +206,19 @@ export default function TasksScreen() {
                 </View>
                 <Text style={styles.modalTitle}>{selectedTask.title}</Text>
                 <Text style={styles.modalDescription}>{selectedTask.description}</Text>
+                
+                <View style={styles.modalRewards}>
+                  <View style={styles.modalExpBadge}>
+                    <Ionicons name="star" size={20} color="#FFD700" />
+                    <Text style={styles.modalExpText}>{selectedTask.exp} EXP</Text>
+                  </View>
+                  {Math.floor((selectedTask.exp / 100) * 5) > 0 && (
+                    <View style={styles.modalCoinBadge}>
+                      <Ionicons name="cash" size={20} color="#FFD700" />
+                      <Text style={styles.modalCoinText}>{Math.floor((selectedTask.exp / 100) * 5)} Coins</Text>
+                    </View>
+                  )}
+                </View>
                 
                 <View style={styles.tipsSection}>
                   <Text style={styles.tipsTitle}>💡 Tips:</Text>
@@ -357,8 +371,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     textAlign: 'center',
-    marginBottom: 25,
+    marginBottom: 20,
     lineHeight: 24,
+  },
+  modalRewards: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 25,
+  },
+  modalExpBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF9E6',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 15,
+  },
+  modalExpText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FF8C00',
+    marginLeft: 8,
+  },
+  modalCoinBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 15,
+  },
+  modalCoinText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+    marginLeft: 8,
   },
   tipsSection: {
     marginBottom: 25,

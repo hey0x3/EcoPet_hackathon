@@ -14,6 +14,10 @@ export default function StatsScreen() {
     tasksToday,
     expProgress,
     expToNextLevel,
+    litterPicked,
+    waterSaved,
+    co2Reduced,
+    itemsRecycled,
   } = usePet();
 
   const getStageName = (stage) => {
@@ -39,22 +43,13 @@ export default function StatsScreen() {
 
   const achievements = getAchievements();
 
-  const getImpactStats = () => {
-    // Estimated impact based on tasks completed
-    const litterPicked = totalTasksCompleted * 0.3; // 30% of tasks might be litter
-    const waterSaved = totalTasksCompleted * 0.2 * 10; // 20% might be water, ~10 gallons each
-    const co2Reduced = totalTasksCompleted * 0.15 * 2; // 15% might be transport, ~2kg CO2 each
-    const itemsRecycled = totalTasksCompleted * 0.25 * 3; // 25% might be recycling, ~3 items each
-
-    return {
-      litterPicked: Math.round(litterPicked),
-      waterSaved: Math.round(waterSaved),
-      co2Reduced: Math.round(co2Reduced * 10) / 10,
-      itemsRecycled: Math.round(itemsRecycled),
-    };
+  // Use actual tracked impact values from context
+  const impact = {
+    litterPicked,
+    waterSaved,
+    co2Reduced: Math.round(co2Reduced * 10) / 10,
+    itemsRecycled,
   };
-
-  const impact = getImpactStats();
 
   return (
     <ScrollView style={styles.container}>
