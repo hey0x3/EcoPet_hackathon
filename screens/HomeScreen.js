@@ -74,19 +74,19 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.progressCard}>
           <Text style={styles.progressTitle}>Progress to Level {level + 1}</Text>
           <View style={styles.progressBarContainer}>
-            <View style={[styles.progressBar, { width: `${expProgress()}%` }]} />
+            <View style={[styles.progressBar, { width: `${Math.min(100, Math.max(0, expProgress()))}%` }]} />
             {/* Yüzdelik ilerlemeyi ortada göster */}
-            <Text style={styles.progressPercentage}>{Math.floor(expProgress())}%</Text>
+            <Text style={styles.progressPercentage}>{Math.min(100, Math.max(0, Math.floor(expProgress())))}%</Text>
           </View>
           <Text style={styles.progressText}>
-            {Math.floor(expToNextLevel())} EXP needed
+            {Math.max(0, Math.floor(expToNextLevel()))} EXP needed
           </Text>
         </View>
 
         <View style={styles.tipCard}>
           <Ionicons name="bulb" size={24} color="#FFD700" />
           <Text style={styles.tipText}>
-            💡 Tip: Complete eco-friendly tasks daily to help {petName} grow and learn about protecting our planet!
+            💡 Tip: Complete eco-friendly tasks daily to help {pet || petName} grow and learn about protecting our planet!
           </Text>
         </View>
       </View>

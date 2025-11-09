@@ -9,7 +9,7 @@ const TASKS = [
     id: 1,
     title: 'Pick Up Litter',
     description: 'Collect and properly dispose of 5 pieces of litter',
-    exp: 5000,
+    exp: 20,
     icon: 'trash',
     color: '#FF6B6B',
     category: 'Waste Reduction',

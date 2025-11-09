@@ -3,9 +3,12 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } fr
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLanguage } from '../src/i18n/LanguageContext';
+import { CommonActions } from '@react-navigation/native';
+import { usePet } from '../context/PetContext';
 
 export default function ResetScreen({ navigation }) {
   const { t, lang } = useLanguage();
+  const { resetPetData } = usePet();
   const [isResetting, setIsResetting] = useState(false);
 
   const handleReset = () => {
@@ -32,21 +35,28 @@ export default function ResetScreen({ navigation }) {
       // Save current language
       const currentLang = lang;
 
+      // Reset PetContext state immediately
+      resetPetData();
+
       // Clear all AsyncStorage
       await AsyncStorage.clear();
 
       // Restore language preference
       await AsyncStorage.setItem('app.lang', currentLang);
 
-      // Navigate to onboarding
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'OnboardingPet' }],
-      });
+      // Small delay to ensure storage is cleared
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // Navigate to onboarding with reset action
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'OnboardingPet' }],
+        })
+      );
     } catch (error) {
       console.error('Error resetting app:', error);
       Alert.alert('Error', 'Failed to reset app data');
-    } finally {
       setIsResetting(false);
     }
   };

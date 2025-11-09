@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const PetContext = createContext();
@@ -37,22 +37,24 @@ export const PetProvider = ({ children }) => {
     loadPetData();
   }, []);
 
-  useEffect(() => {
-    savePetData();
-  }, [exp, level, petStage, petName, totalTasksCompleted, tasksToday, lastTaskDate, consecutiveDaysLogged, hatsCollected, firstTaskDone, expPerLevel, coins, litterPicked, waterSaved, co2Reduced, itemsRecycled]);
+  // Helper function to calculate level from total EXP
+  const calculateLevelFromExp = useCallback((totalExp) => {
+    let calculatedLevel = 1;
+    let cumulativeExp = 0;
+    let currentExpPerLevel = 100;
+    
+    while (cumulativeExp + currentExpPerLevel <= totalExp) {
+      cumulativeExp += currentExpPerLevel;
+      calculatedLevel++;
+      currentExpPerLevel += 10; // Increase by 10 each level
+    }
+    
+    return calculatedLevel;
+  }, []);
 
   // Level ve Stage kontrolü, EXP artırımı ile birlikte
   useEffect(() => {
-    let calculatedLevel = level;
-    let currentExpThreshold = expPerLevel * (calculatedLevel - 1);
-    
-    // Calculate level based on EXP
-    while (exp >= currentExpThreshold + expPerLevel) {
-      calculatedLevel++;
-      currentExpThreshold += expPerLevel;
-      // Yeni level atlandığında bir sonraki level için gereken EXP %10 artsın
-      setExpPerLevel(prev => Math.floor(prev * 1.1));
-    }
+    const calculatedLevel = calculateLevelFromExp(exp);
     
     if (calculatedLevel !== level && calculatedLevel > level) {
       setLevel(calculatedLevel);
@@ -69,7 +71,11 @@ export const PetProvider = ({ children }) => {
     else if (calculatedLevel >= 2) newStage = 'baby';
 
     if (newStage !== petStage) setPetStage(newStage);
-  }, [exp, level, petStage, expPerLevel]);
+  }, [exp, level, petStage, calculateLevelFromExp]);
+
+  useEffect(() => {
+    savePetData();
+  }, [exp, level, petStage, petName, totalTasksCompleted, tasksToday, lastTaskDate, consecutiveDaysLogged, hatsCollected, firstTaskDone, expPerLevel, coins, litterPicked, waterSaved, co2Reduced, itemsRecycled]);
 
   useEffect(() => {
     const today = new Date().toDateString();
@@ -193,14 +199,36 @@ export const PetProvider = ({ children }) => {
 
   const renamePet = (newName) => setPetName(newName);
 
+  const getTotalExpForLevel = (targetLevel) => {
+    // Calculate total EXP needed to reach a specific level
+    // Level 1: 0 EXP
+    // Level 2: 100 EXP (base)
+    // Level 3: 100 + 110 = 210 EXP
+    // Level 4: 100 + 110 + 120 = 330 EXP
+    let total = 0;
+    let currentExpPerLevel = 100; // Starting value
+    for (let i = 1; i < targetLevel; i++) {
+      total += currentExpPerLevel;
+      currentExpPerLevel += 10; // Increase by 10 each level
+    }
+    return total;
+  };
+
   const expToNextLevel = () => {
-    return Math.floor(expPerLevel * level - exp);
+    const totalExpForNextLevel = getTotalExpForLevel(level + 1);
+    return Math.max(0, Math.floor(totalExpForNextLevel - exp));
   };
 
   const expProgress = () => {
-    const currentLevelExp = expPerLevel * (level - 1);
-    const nextLevelExp = expPerLevel * level;
-    return ((exp - currentLevelExp) / (nextLevelExp - currentLevelExp)) * 100;
+    const currentLevelTotalExp = getTotalExpForLevel(level);
+    const nextLevelTotalExp = getTotalExpForLevel(level + 1);
+    const expInCurrentLevel = exp - currentLevelTotalExp;
+    const expNeededForLevel = nextLevelTotalExp - currentLevelTotalExp;
+    
+    if (expNeededForLevel <= 0) return 0;
+    
+    const progress = (expInCurrentLevel / expNeededForLevel) * 100;
+    return Math.min(100, Math.max(0, progress));
   };
 
   const spendCoins = (amount) => {
@@ -217,6 +245,26 @@ export const PetProvider = ({ children }) => {
 
   const addCoins = (amount) => {
     setCoins(prev => prev + amount);
+  };
+
+  const resetPetData = () => {
+    setExp(0);
+    setLevel(1);
+    setPetStage('egg');
+    setPetName('EcoBuddy');
+    setTotalTasksCompleted(0);
+    setTasksToday(0);
+    setLastTaskDate(null);
+    setCoins(250);
+    setShowLevelUp(false);
+    setLitterPicked(0);
+    setWaterSaved(0);
+    setCo2Reduced(0);
+    setItemsRecycled(0);
+    setConsecutiveDaysLogged(0);
+    setHatsCollected(0);
+    setFirstTaskDone(false);
+    setExpPerLevel(100);
   };
 
   const achievements = [
@@ -250,6 +298,7 @@ export const PetProvider = ({ children }) => {
     consecutiveDaysLogged,
     hatsCollected,
     expPerLevel,
+    resetPetData,
   };
 
   return <PetContext.Provider value={value}>{children}</PetContext.Provider>;
