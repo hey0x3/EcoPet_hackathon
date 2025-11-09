@@ -35,16 +35,20 @@ export default function NotificationsScreen() {
   };
 
   const requestPermissions = async () => {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    
-    if (finalStatus !== 'granted') {
-      console.log('Notification permissions not granted');
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      
+      if (finalStatus !== 'granted') {
+        console.log('Notification permissions not granted');
+      }
+    } catch (error) {
+      console.error('Error requesting permissions:', error);
     }
   };
 
@@ -86,15 +90,16 @@ export default function NotificationsScreen() {
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: t('test_notification_title'),
-          body: t('test_notification_body'),
+          title: t('test_notification_title') || 'EcoPet Reminder',
+          body: t('test_notification_body') || 'Time to complete your eco-friendly tasks!',
           sound: true,
         },
         trigger: null, // Send immediately
       });
-      Alert.alert('✓', t('notification_sent'));
+      Alert.alert('✓', t('notification_sent') || 'Test notification sent!');
     } catch (error) {
       console.error('Error sending test notification:', error);
+      Alert.alert('Error', 'Failed to send notification. Please check permissions.');
     }
   };
 
